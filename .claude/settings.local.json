@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(findstr \"react\")",
+      "Bash(dir jsuisimp-analysis-tab.js)",
+      "Bash(dir jsapp.js)",
+      "Bash(dir /b js)",
+      "Bash(npm run dev)",
+      "Bash(find /c/Users/reall/Downloads/200 -type f \\\\\\(-name *ray* -o -name *pcf* \\\\\\) ! -path */node_modules/*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
