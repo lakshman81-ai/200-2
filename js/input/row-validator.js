@@ -646,6 +646,26 @@ export function validateRows(rows, config) {
         });
         const rawLenCalc = lenKey ? (parseFloat(rCurrent[lenKey]) || 0) : 0;
 
+        // --- Defect 4 Fix: FLANGE Stretched ---
+        // For FLANGE components, we restrict their physical length to LEN_CALC_STATIC.
+        // The remaining gap will be filled by the bridge pipe if ray shooter resolves it.
+        const isFlange = String(rCurrent.Type || "").trim().toUpperCase().includes('FLAN');
+        if (isFlange) {
+            const staticLenKey = Object.keys(rCurrent).find(k => k.trim().toUpperCase() === 'LEN_CALC_STATIC');
+            const staticLen = staticLenKey ? (parseFloat(rCurrent[staticLenKey]) || 0) : 0;
+
+            if (staticLen > 0 && lenCalc > staticLen) {
+                // Shrink e2/n2/u2 to match the static length along the computed direction
+                if (rCurrent.__axisVec) {
+                    e2 = e1 + rCurrent.__axisVec.dE * staticLen;
+                    n2 = n1 + rCurrent.__axisVec.dN * staticLen;
+                    u2 = u1 + rCurrent.__axisVec.dU * staticLen;
+                    lenCalc = staticLen;
+                    console.log(`[Flange Shrink] Seq ${rCurrent.Sequence}: shrunk FLANGE length from ${rawLenCalc}mm to static length ${staticLen}mm.`);
+                }
+            }
+        }
+
         // --- SUPPORT Sp1 CLONE + ZERO-LENGTH COLLAPSE ---
         // Always creates a _Sp1 PIPE clone when a support has a non-zero reach to the next component.
         // Uses the pre-gate EP2 coords so push-gate collapsing on the support row itself cannot
@@ -1526,6 +1546,28 @@ export function validateRows(rows, config) {
 
     // Stage 3.5 snapshot - deep copy taken RIGHT BEFORE Ray-Shooter physics executes
     const phase10Snapshot = finalValidated.map(r => Object.assign({}, r));
+
+    // ── Defect 1 Fix: Ensure ANCI CP rows enter the grouper ──────────
+    const supportInjects = [];
+    for (let i = 0; i < finalValidated.length; i++) {
+        const row = finalValidated[i];
+        if (row.REAL_TYPE === 'SUPPORT' && String(row.Point ?? '').trim() === '0') {
+            if (row.__raySkip) {
+                // If the only CP row is skipped, clone it for the grouper so it produces a SUPPORT block
+                const supportRow = { ...row };
+                supportRow.Type = 'SUPPORT';
+                supportRow.__raySkip = false;
+                supportRow.__isSupportEmit = true;
+                supportInjects.push(supportRow);
+            }
+        }
+    }
+    for (const r of supportInjects) {
+        // Prevent duplicate creation
+        if (!finalValidated.some(v => v.RefNo === r.RefNo && v.Type === 'SUPPORT' && !v.__raySkip)) {
+            finalValidated.push(r);
+        }
+    }
 
     // ── Stage 1C: Ray Shooter — resolve remaining orphans ────────────
     const rsResult = runRayShooter(finalValidated);

@@ -125,7 +125,16 @@ export class TableDataBuilder {
             const startX = (typeof rawE === 'number' ? rawE : parseFloat(rawE) || 0).toFixed(1);
             const startY = (typeof rawN === 'number' ? rawN : parseFloat(rawN) || 0).toFixed(1);
             const startZ = (typeof rawU === 'number' ? rawU : parseFloat(rawU) || 0).toFixed(1);
-            const lenCalc = parseFloat(firstRow.Len_Calc || firstRow.LENCALC || 0);
+            let lenCalc = parseFloat(firstRow.Len_Calc || firstRow.LENCALC || 0);
+
+            // Defect 2 Fix: If it's a support, and its length was explicitly collapsed to 0,
+            // we can show the original length from LEN_CALC_STATIC for display purposes.
+            // Or if it's 0 and has static length.
+            const staticLenKey = Object.keys(firstRow).find(k => k.trim().toUpperCase() === 'LEN_CALC_STATIC');
+            const staticLen = staticLenKey ? (parseFloat(firstRow[staticLenKey]) || 0) : 0;
+            if (staticLen > 0 && lenCalc === 0 && (type === 'SUPPORT' || type === 'ANCI' || type === 'RSTR')) {
+                lenCalc = staticLen;
+            }
             const sequence = group.firstRowIndex !== undefined ? group.firstRowIndex + 1 : "-";
 
             // Line No Derived

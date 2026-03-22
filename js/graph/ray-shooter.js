@@ -90,7 +90,24 @@ export function runRayShooter(rows) {
             );
             if (cp) {
                 const cx = parseFloat(cp.EndX), cy = parseFloat(cp.EndY), cz = parseFloat(cp.EndZ);
-                if (isFinite(cx) && isFinite(cy) && isFinite(cz)) return { x: cx, y: cy, z: cz };
+                if (isFinite(cx) && isFinite(cy) && isFinite(cz)) {
+                    let cpVec = cp.__axisVec || null;
+                    if (!cpVec) {
+                        const cpOx = parseFloat(cp.East) || 0;
+                        const cpOy = parseFloat(cp.North) || 0;
+                        const cpOz = parseFloat(cp.Up) || 0;
+                        const ddx = cx - cpOx, ddy = cy - cpOy, ddz = cz - cpOz;
+                        const dmag = Math.sqrt(ddx*ddx + ddy*ddy + ddz*ddz);
+                        if (dmag > 0.001) {
+                            cpVec = { dE: ddx/dmag, dN: ddy/dmag, dU: ddz/dmag };
+                            // cache it for shoot
+                            cp.__axisVec = cpVec;
+                        }
+                    }
+                    // Pass cpVec up to the orphan so _shootOrphan can use it
+                    orphan.__axisVec = cpVec;
+                    return { x: cx, y: cy, z: cz };
+                }
             }
         }
 
