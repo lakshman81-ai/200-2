@@ -135,6 +135,33 @@ export function initViewerTab() {
         if (typeof window.__pcfCameraCenter === 'function') window.__pcfCameraCenter();
         if (_viewer3d?.fitCamera) _viewer3d.fitCamera();
     });
+
+    document.getElementById('btn-viewer-zoom-select')?.addEventListener('click', () => {
+        if (_viewer3d && window._pcfEditor && window._pcfEditor._selectedId) {
+            _viewer3d.zoomToComponent(window._pcfEditor._selectedId);
+        } else if (_viewer3d) {
+            console.log("No component selected to zoom to.");
+        }
+    });
+
+    document.getElementById('btn-viewer-marquee-zoom')?.addEventListener('click', () => {
+        if (_viewer3d) {
+            _viewer3d.enableMarqueeZoom();
+            console.log("Marquee zoom tool activated.");
+        }
+    });
+
+    document.getElementById('btn-viewer-axis-panel')?.addEventListener('click', () => {
+        // Toggle the property panel overlay or restore enhanced axis
+        console.log("Restoring enhanced axis and component panel");
+        const panel = document.querySelector('.pcf-property-panel');
+        if (panel) {
+            panel.classList.toggle('active');
+        }
+        if (_viewer3d) {
+            _viewer3d.toggleEnhancedAxis();
+        }
+    });
     document.addEventListener('fullscreenchange', () => {
         if (_viewer3d?.renderer) {
             const w = _dom.canvasWrap?.clientWidth || window.innerWidth;
@@ -540,6 +567,7 @@ async function _render3D() {
         // Initialize 3D Editor Overlay
         try {
             _editor = new EditorCore(_viewer3d);
+            window._pcfEditor = _editor;
             console.info(`${LOG_PREFIX} 3D Editor Module loaded.`);
         } catch (e) {
             console.error(`${LOG_PREFIX} Failed to load Editor Module:`, e);
